@@ -16,12 +16,12 @@ This project uses poetry for dependency management.
   `poetry config virtualenvs.in-project true`
 
 * Finally, run `poetry sync` to read the lock file and create the virtualenv in the project
-
-## Model Creation
+## Prereqs
 Before running any of the code, you will need to activate your virtual env:
 
 ```. ./.venv/bin/activate```
 
+## Model Creation
 There are two important pieces of model creation to be aware of:
 1. There is a local python script which will create a tuned CatBoostClassifier model and save it in the `model/models/` directory.
 1. Experimentation with other types of models was written in a Jupyter notebook and run on Google Colab to determine which type of model should ultimately be used.
