@@ -18,6 +18,10 @@ This project uses poetry for dependency management.
 * Finally, run `poetry sync` to read the lock file and create the virtualenv in the project
 
 ## Model Creation
+Before running any of the code, you will need to activate your virtual env:
+
+```ml_biz_app % . ./.venv/bin/activate```
+
 In order to create the models (for all different types of models trained):
 1. First, run the `model/telco_data_cleaning.py` script to generate the cleaned data file.  The output, `data/cleaned_telco_data.csv` is checked into this repo to enable others to use it in their models without having to run this command.
 1. Next, open the Jupyter notebooks in the `model/` directory and run them in this order:
