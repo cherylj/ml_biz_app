@@ -8,27 +8,23 @@ in the data directory and perform the following operations:
 '''
 
 import pandas as pd
+from model_features import YES_NO_FEATURES, MULTI_CAT_FEATURES
 
-data_dir = "../data"
+data_dir = "data"
 ibm_churn_df = pd.read_excel(data_dir + "/Telco_customer_churn.xlsx")
 
 # We're going to drop the columns that aren't relevant to the classification
 # or are redundant
-features_to_drop = ['CustomerID', 'Count', 'Country', 'State', 'City', 'Lat Long',
+raw_features_to_drop = ['CustomerID', 'Count', 'Country', 'State', 'City', 'Lat Long',
                     'Latitude', 'Longitude', 'Total Charges', 'Churn Label',
                     'Churn Score', 'Churn Reason']
-churn_df = ibm_churn_df.drop(features_to_drop, axis=1)
+
+churn_df = ibm_churn_df.drop(raw_features_to_drop, axis=1)
 
 # Rename Churn Value for ease of use
 churn_df = churn_df.rename(columns={'Churn Value': 'Churn'})
 
-yes_no_features = ['Senior Citizen', 'Dependents', 'Partner', 'Paperless Billing',
-                   'Phone Service']
-multi_cat_features = ['Gender', 'Contract', 'Payment Method', 'Multiple Lines',
-                      'Online Security', 'Online Backup', 'Device Protection', 'Tech Support',
-                      'Internet Service', 'Streaming TV', 'Streaming Movies']
-
-for col in yes_no_features:
+for col in YES_NO_FEATURES:
   # Change the "Yes" to a 1, and "No" to a 0
   churn_df[col] = churn_df[col].map({'Yes': 1, 'No': 0})
 
@@ -37,7 +33,7 @@ for col in yes_no_features:
 churn_df.to_csv(data_dir + '/cleaned_telco_data_no_OHE.csv')
 
 # Next, use one-hot encoding for the categorical features
-churn_df = pd.get_dummies(churn_df, columns=multi_cat_features, dtype=int)
+churn_df = pd.get_dummies(churn_df, columns=MULTI_CAT_FEATURES, dtype=int)
 
 # Save the cleaned dataset to a new csv file
 churn_df.to_csv(data_dir + '/cleaned_telco_data.csv')
