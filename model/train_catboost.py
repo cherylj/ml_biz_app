@@ -7,8 +7,8 @@ from imblearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from catboost import CatBoostClassifier
 
-from model_features import MULTI_CAT_FEATURES, NUMERIC_FEATURES, FEATURES_TO_DROP
-from column_dropper import ColumnDropper
+from model.model_features import MULTI_CAT_FEATURES, NUMERIC_FEATURES, FEATURES_TO_DROP
+from model.column_dropper import ColumnDropper
 
 PIPELINE_PATH = "model/models/model_pipeline.joblib"
 pipeline = joblib.load(PIPELINE_PATH)
@@ -47,7 +47,7 @@ RANDOM_STATE = 42
 
 # --------------------- Data Pre Processing ---------------------
 # Read in the cleaned data
-dir_data= "../data"
+dir_data= "data"
 cleaned_df = pd.read_csv(dir_data + "/cleaned_telco_data_no_OHE.csv", index_col=0)
 
 # --------------------- Data Splitting ---------------------
@@ -132,4 +132,4 @@ scaler = best_cb.named_steps["prep"].named_transformers_["num"]
 print("Means:", scaler.mean_)  
 print("Stds:", scaler.scale_) 
 
-joblib.dump(best_cb, "models/model_pipeline.joblib")
+joblib.dump(best_cb, "model/models/model_pipeline.joblib")
