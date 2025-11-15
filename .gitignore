@@ -1,2 +1,4 @@
 # CatBoost
-model/catboost_info/
+**/catboost_info/*
+
+**/__pycache__/

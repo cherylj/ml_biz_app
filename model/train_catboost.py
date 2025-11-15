@@ -1,15 +1,18 @@
 import pandas as pd
+import joblib
 from sklearn.model_selection import train_test_split, GridSearchCV, StratifiedKFold
 from sklearn.metrics import make_scorer
 from sklearn.compose import ColumnTransformer
 from imblearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from catboost import CatBoostClassifier
+
+from model.model_features import MULTI_CAT_FEATURES, NUMERIC_FEATURES, FEATURES_TO_DROP
+from model.column_dropper import ColumnDropper
 
 # Create a helper function to measure the lift of a model
 # By default we will assume 10% for the percentage we are
 # targeting.
-
 def lift_at_k(y_true, y_scores, k=0.1):
     n = len(y_true)
     cutoff = int(n * k)
@@ -40,20 +43,8 @@ RANDOM_STATE = 42
 
 # --------------------- Data Pre Processing ---------------------
 # Read in the cleaned data
-dir_data= "../data"
-cleaned_df = pd.read_csv(dir_data + "/cleaned_telco_data.csv", index_col=0)
-
-# Remove the perfectly correlated features
-corr_cols = ['Multiple Lines_No phone service', 'Online Security_No internet service',
-             'Online Backup_No internet service', 'Device Protection_No internet service',
-             'Tech Support_No internet service', 'Streaming TV_No internet service',
-             'Streaming Movies_No internet service']
-
-cleaned_df = cleaned_df.drop(corr_cols, axis=1)
-
-# We also need to drop the two features of lowest importance (also found in our
-# Jupyter notebook)
-cleaned_df = cleaned_df.drop(['Device Protection_No', 'Contract_One year'], axis=1)
+dir_data= "data"
+cleaned_df = pd.read_csv(dir_data + "/cleaned_telco_data_no_OHE.csv", index_col=0)
 
 # --------------------- Data Splitting ---------------------
 # We'll use a train / test split with 70/30 and stratification of the
@@ -69,9 +60,6 @@ X_train, X_test, y_train, y_test = train_test_split(
       stratify=y
 )
 
-numeric_cols = ['Tenure Months', 'Monthly Charges', 'CLTV']
-
-
 # Specify common parameters for the CatBoost model
 params = {'iterations': 500,
     'eval_metric': 'PRAUC',
@@ -82,18 +70,20 @@ params = {'iterations': 500,
     'loss_function': 'Logloss'
 }
 
-# Only scale the numeric columns.  We know that all the numeric columns are
-# very high in feature importance, so we don't need to make sure we didn't
-# remove them here.
+# Create our transformer to scale the numeric columns and perform OHE
 pre = ColumnTransformer(
-transformers=[
-    ("num", StandardScaler(), numeric_cols)
-],
-remainder="passthrough"
+    transformers=[
+        ("num", StandardScaler(), NUMERIC_FEATURES),
+        ("cat", OneHotEncoder(handle_unknown="ignore", sparse_output=False), MULTI_CAT_FEATURES)
+    ],
+    remainder="passthrough",
+    verbose_feature_names_out=False
 )
+pre.set_output(transform="pandas")
 
 steps = [
     ("prep", pre),
+    ("drop", ColumnDropper(FEATURES_TO_DROP)),
     (("model", CatBoostClassifier(**params)))
 ]
 
@@ -130,4 +120,12 @@ print('   Best params:', gs.best_params_)
 print('   Best lift score:', gs.best_score_)
 print('   Out of sample lift score:', lift)
 
-best_cb.named_steps["model"].save_model('models/catboost_model.cbm')
+feature_names = best_cb.named_steps["prep"].get_feature_names_out()
+print(feature_names)
+
+scaler = best_cb.named_steps["prep"].named_transformers_["num"]
+
+print("Means:", scaler.mean_)  
+print("Stds:", scaler.scale_) 
+
+joblib.dump(best_cb, "model/models/model_pipeline.joblib")
