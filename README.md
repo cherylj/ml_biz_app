@@ -29,7 +29,9 @@ There are two important pieces of model creation to be aware of:
 
 In order to create the final model for this service:
 1. First, run the `model/telco_data_cleaning.py` script to generate the cleaned data file.  The output, `data/cleaned_telco_data.csv` is checked into this repo to enable others to use it in their models without having to run this command.
-1. Next, run the `model/train_catboost.py` script to generate a tuned CatBoostClassifier model.  This will save off the trained model as `model/models/catboost_model.cbm`, allowing it to be imported in other parts of the app in the future.
+1. Next, run the `model/train_catboost.py` script to generate a tuned CatBoostClassifier model.  This will save off the trained model as `model/models/catboost_model.cbm`, allowing it to be imported in other parts of the app in the future:
+
+    `python -m model.train_catboost`
 
 ### Model Experimentation
 If you would like to run the experimentation notebook, open `model/model_training.ipynb` with Google Colab, and set your own `dir_data` to point to the directory your data is located in.

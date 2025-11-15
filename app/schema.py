@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Annotated
+from typing import Annotated, List
 from typing_extensions import Self
 from pydantic import BaseModel, Field, model_validator
 
@@ -93,5 +93,8 @@ class CustomerFeatures(BaseModel):
                 raise ValueError('Invalid configuration for phone service')
         return self
             
-class PredictResponse(BaseModel):
-    probabilities: float
+class PredictOneResponse(BaseModel):
+    probability: float
+
+class PredictBatchResponse(BaseModel):
+    probabilities: List[float]

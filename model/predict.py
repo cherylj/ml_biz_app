@@ -10,7 +10,9 @@ def _prep_df(df):
     # our Yes / No columns to 0 / 1
     for col in YES_NO_FEATURES:
         df[col] = df[col].map({'Yes': 1, 'No': 0})
+    return df
 
 def get_proba(df):
     df = _prep_df(df)
-    return pipeline.predict_proba(df)
+    probs = pipeline.predict_proba(df)
+    return probs[:, 1]

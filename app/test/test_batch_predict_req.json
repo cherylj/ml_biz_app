@@ -1,0 +1,47 @@
+[
+    {
+        "Tenure_Months": 5,
+        "Monthly_Charges": 59.95,
+        "CLTV": 395,
+        "Zip_Code": "97845",
+        "Internet_Service": "DSL",
+        "Gender": "Female",
+        "Senior_Citizen": "Yes",
+        "Partner": "Yes",
+        "Dependents": "No",
+        "Phone_Service": "Yes",
+        "Paperless_Billing": "No",
+        "Contract": "Month-to-month",
+        "Payment_Method": "Mailed check",
+        "Multiple_Lines": "Yes",
+        "Online_Security": "No",
+        "Online_Backup": "No",
+        "Device_Protection": "Yes",
+        "Tech_Support": "No",
+        "Streaming_TV": "Yes",
+        "Streaming_Movies": "Yes"
+    },
+    {
+        "Tenure_Months": 12,
+        "Monthly_Charges": 99.95,
+        "CLTV": 1100,
+        "Zip_Code": "97845",
+        "Internet_Service": "DSL",
+        "Gender": "Female",
+        "Senior_Citizen": "Yes",
+        "Partner": "Yes",
+        "Dependents": "No",
+        "Phone_Service": "Yes",
+        "Paperless_Billing": "No",
+        "Contract": "One year",
+        "Payment_Method": "Mailed check",
+        "Multiple_Lines": "Yes",
+        "Online_Security": "No",
+        "Online_Backup": "No",
+        "Device_Protection": "Yes",
+        "Tech_Support": "No",
+        "Streaming_TV": "No",
+        "Streaming_Movies": "No"
+    }
+]
+

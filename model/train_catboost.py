@@ -10,10 +10,6 @@ from catboost import CatBoostClassifier
 from model.model_features import MULTI_CAT_FEATURES, NUMERIC_FEATURES, FEATURES_TO_DROP
 from model.column_dropper import ColumnDropper
 
-PIPELINE_PATH = "model/models/model_pipeline.joblib"
-pipeline = joblib.load(PIPELINE_PATH)
-quit()
-
 # Create a helper function to measure the lift of a model
 # By default we will assume 10% for the percentage we are
 # targeting.
