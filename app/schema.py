@@ -44,8 +44,8 @@ class CustomerFeatures(BaseModel):
 
     Zip_Code: str = Field(
         ...,
-        description="5-digit or ZIP+4 postal code",
-        pattern=r"^\d{5}(-\d{4})?$"
+        description="5-digit postal code",
+        pattern=r"^\d{5}$"
     )
 
     Internet_Service: InternetService = Field(..., description="Type of internet service: [Fiber optic|DSL|No]")
@@ -71,7 +71,7 @@ class CustomerFeatures(BaseModel):
     }
 
     @model_validator(mode='after')
-    def validate_phone_fields(self) -> Self:
+    def validate_service_fields(self) -> Self:
         phone_service_dep_fields = [self.Multiple_Lines]
         internet_service_dep_fields = [self.Online_Security,
                                     self.Online_Backup,
@@ -88,13 +88,13 @@ class CustomerFeatures(BaseModel):
         
         for f in internet_service_dep_fields:
             if self.Internet_Service == YesNo.no and  f != YesNo_NoInternet.no_internet:
-                raise ValueError('Invalid configuration for phone service')
+                raise ValueError('Invalid configuration for internet service')
             if self.Internet_Service == YesNo.yes and  f == YesNo_NoInternet.no_internet:
-                raise ValueError('Invalid configuration for phone service')
+                raise ValueError('Invalid configuration for internet service')
         return self
             
 class PredictOneResponse(BaseModel):
     probability: float
 
 class PredictBatchResponse(BaseModel):
-    probabilities: List[float]
+    probabilities: List[float] 
