@@ -1,3 +1,6 @@
+# Code Coverage
+.coverage
+
 # CatBoost
 **/catboost_info/*
 

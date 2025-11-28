@@ -2,5 +2,10 @@
   "cSpell.words": [
     "Stds",
     "telco"
-  ]
+  ],
+  "python.testing.pytestArgs": [
+    "test"
+  ],
+  "python.testing.unittestEnabled": false,
+  "python.testing.pytestEnabled": true
 }
