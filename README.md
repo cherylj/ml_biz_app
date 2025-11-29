@@ -35,3 +35,14 @@ In order to create the final model for this service:
 
 ### Model Experimentation
 If you would like to run the experimentation notebook, open `model/model_training.ipynb` with Google Colab, and set your own `dir_data` to point to the directory your data is located in.
+
+# Testing
+### Unit Tests
+To run the tests for this repo, run:
+
+`poetry run python -m pytest --disable-warnings`
+
+The `disable-warnings` flag suppresses warnings from the CatBoost model about functionality that is deprecated.  Updating this is out of scope for this PoC.
+
+### Load testing with Locust
+`locust -f test/load-testing/locustfile.py`

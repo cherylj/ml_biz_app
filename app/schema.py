@@ -87,9 +87,9 @@ class CustomerFeatures(BaseModel):
                 raise ValueError('Invalid configuration for phone service')
         
         for f in internet_service_dep_fields:
-            if self.Internet_Service == YesNo.no and  f != YesNo_NoInternet.no_internet:
+            if self.Internet_Service == InternetService.no and f != YesNo_NoInternet.no_internet:
                 raise ValueError('Invalid configuration for internet service')
-            if self.Internet_Service == YesNo.yes and  f == YesNo_NoInternet.no_internet:
+            if self.Internet_Service != InternetService.no and f == YesNo_NoInternet.no_internet:
                 raise ValueError('Invalid configuration for internet service')
         return self
             
