@@ -1,7 +1,10 @@
 # app.py
 import logging
 import pandas as pd
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi import FastAPI, HTTPException
+from pathlib import Path
 
 from model.model_features import INPUT_FEATURES
 from model.predict import get_proba
@@ -10,6 +13,7 @@ from app.schema import CustomerFeatures, PredictBatchResponse, PredictOneRespons
 APP_NAME = "churn-api"
 
 app = FastAPI(title=APP_NAME, version="1.0.0")
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 def _to_dataframe(req: list[CustomerFeatures]) -> pd.DataFrame:
     rows = [row.model_dump(by_alias=True, exclude_none=True) for row in req]
@@ -60,3 +64,8 @@ def predict_batch(req: list[CustomerFeatures]):
 @app.post("/predict_one", response_model=PredictOneResponse)
 def predict(req: CustomerFeatures):
     return PredictOneResponse(probability=predict_batch([req]).probabilities[0])
+
+@app.get("/", response_class=FileResponse)
+async def churn_uploader_page():
+    html_path = Path("app/static") / "uploader.html"
+    return FileResponse(html_path, media_type="text/html")
