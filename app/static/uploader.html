@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Customer Churn Batch Prediction</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Simple styling, tweak as you like -->
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f5f5f7;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 1100px;
+      margin: 40px auto;
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 24px 28px 32px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+    }
+    h1 {
+      margin-top: 0;
+      font-size: 1.8rem;
+    }
+    p.description {
+      color: #555;
+      margin-top: 4px;
+      margin-bottom: 20px;
+    }
+    form {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    input[type="file"] {
+      padding: 6px 0;
+    }
+    button {
+      border: none;
+      padding: 10px 18px;
+      border-radius: 999px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.95rem;
+      background: #2563eb;
+      color: #ffffff;
+      transition: transform 0.05s ease, box-shadow 0.1s ease, background 0.1s ease;
+    }
+    button:hover {
+      background: #1d4ed8;
+      box-shadow: 0 4px 12px rgba(37,99,235,0.3);
+      transform: translateY(-1px);
+    }
+    button:disabled {
+      opacity: 0.6;
+      cursor: default;
+      box-shadow: none;
+      transform: none;
+    }
+    #status {
+      margin-top: 4px;
+      margin-bottom: 12px;
+      font-size: 0.9rem;
+      color: #444;
+    }
+    #status.error {
+      color: #b91c1c;
+    }
+    #results-section {
+      margin-top: 24px;
+      display: none;
+    }
+    #results-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    #results-header h2 {
+      margin: 0;
+      font-size: 1.3rem;
+    }
+    .table-wrapper {
+      max-height: 500px;
+      overflow: auto;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    thead {
+      position: sticky;
+      top: 0;
+      background: #f3f4f6;
+      z-index: 1;
+    }
+    th, td {
+      padding: 8px 10px;
+      border-bottom: 1px solid #e5e7eb;
+      text-align: left;
+    }
+    th {
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    tr:nth-child(even) td {
+      background: #fafafa;
+    }
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    .tag.churn-yes {
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+    .tag.churn-no {
+      background: #dcfce7;
+      color: #166534;
+    }
+    .tag.error {
+      background: #fef3c7;
+      color: #92400e;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Customer Churn Batch Prediction</h1>
+    <p class="description">
+      Upload a CSV of customer records. Each row will be sent to the FastAPI churn model,
+      and the predictions will be shown in a table and downloadable as CSV.
+    </p>
+
+    <form id="upload-form">
+      <input type="file" id="file-input" accept=".csv" required />
+      <button type="submit" id="submit-btn">Upload &amp; Predict</button>
+    </form>
+
+    <div id="status"></div>
+
+    <div id="results-section">
+      <div id="results-header">
+        <h2>Predictions</h2>
+        <button id="download-btn" type="button">Download results as CSV</button>
+      </div>
+      <div class="table-wrapper">
+        <table id="results-table"></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- PapaParse for robust CSV parsing -->
+  <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
+
+  <script>
+    // Adjust this to your actual FastAPI endpoint
+    // e.g., same-origin: "/predict" if you're serving this via FastAPI StaticFiles
+    const API_URL = "http://localhost:8000/predict_one";
+    const ID_COLUMN = "Customer_id";  // change if your CSV uses a different header
+
+    let churnSortDir = "desc";   // track current sort direction for churn_probability
+
+    const uploadForm   = document.getElementById("upload-form");
+    const fileInput    = document.getElementById("file-input");
+    const statusEl     = document.getElementById("status");
+    const submitBtn    = document.getElementById("submit-btn");
+    const resultsSect  = document.getElementById("results-section");
+    const resultsTable = document.getElementById("results-table");
+    const downloadBtn  = document.getElementById("download-btn");
+
+    let latestResults = [];   // holds rows + predictions for download
+
+    function setStatus(msg, isError = false) {
+      statusEl.textContent = msg;
+      statusEl.className = isError ? "error" : "";
+    }
+
+    uploadForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+      const file = fileInput.files[0];
+      if (!file) {
+        setStatus("Please select a CSV file first.", true);
+        return;
+      }
+
+      submitBtn.disabled = true;
+      setStatus("Reading CSV file...");
+
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: function (results) {
+          if (!results.data || results.data.length === 0) {
+            setStatus("The CSV appears to be empty or invalid.", true);
+            submitBtn.disabled = false;
+            return;
+          }
+          processRows(results.data);
+        },
+        error: function (err) {
+          setStatus("Error parsing CSV: " + err.message, true);
+          submitBtn.disabled = false;
+        }
+      });
+    });
+
+    async function processRows(rows) {
+      latestResults = [];
+      const total = rows.length;
+
+      for (let i = 0; i < total; i++) {
+        const row = rows[i];
+        setStatus(`Sending row ${i + 1} of ${total} to API...`);
+
+        try {
+          // The row keys must match your FastAPI Pydantic schema field names
+          const payload = { ...row };
+          if (ID_COLUMN in payload) {
+            delete payload[ID_COLUMN];
+          }
+          const resp = await fetch(API_URL, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+          });
+
+          if (!resp.ok) {
+            const text = await resp.text();
+            row._error = `HTTP ${resp.status}: ${text.slice(0, 100)}`;
+          } else {
+            const prediction = await resp.json();
+            // Adjust these property names to match your actual response schema
+            // Example possibilities:
+            //   { "churn_probability": 0.27, "churn_prediction": 1 }
+            //   { "probability": 0.27, "prediction": 1 }
+            const proba =
+              prediction.probability ??
+              null;
+
+            row.churn_probability = proba;
+          }
+        } catch (err) {
+          row._error = "Request error: " + err.message;
+        }
+
+        latestResults.push(row);
+      }
+
+      renderTable(latestResults);
+      resultsSect.style.display = "block";
+      setStatus(`Done. Processed ${total} rows.`);
+      submitBtn.disabled = false;
+    }
+
+    function renderTable(rows) {
+      resultsTable.innerHTML = "";
+
+      if (!rows || rows.length === 0) {
+        return;
+      }
+
+      // Collect all column names
+      const colSet = new Set();
+      rows.forEach(row => {
+        Object.keys(row).forEach(k => {
+          if (k !== "__parsed_extra") colSet.add(k);
+        });
+      });
+
+      // Base list of columns
+      let columns = Array.from(colSet);
+
+      // Remove special columns so we can re-insert them in a controlled order
+      const specialCols = ["churn_prediction", "churn_probability", ID_COLUMN];
+      columns = columns.filter(c => !specialCols.includes(c));
+
+      // Prepend in desired order if present
+      if (colSet.has(ID_COLUMN)) {
+        columns.unshift(ID_COLUMN);
+      }
+      if (colSet.has("churn_probability")) {
+        columns.unshift("churn_probability");
+      }
+      if (colSet.has("churn_prediction")) {
+        columns.unshift("churn_prediction");
+      }
+
+      // Header
+      const thead = document.createElement("thead");
+      const headerRow = document.createElement("tr");
+      columns.forEach(col => {
+        const th = document.createElement("th");
+
+        // Default header text
+        let headerText = col;
+
+        // Make churn_probability sortable
+        if (col === "churn_probability") {
+          th.style.cursor = "pointer";
+          th.title = "Click to sort by churn probability";
+          if (churnSortDir === "asc") {
+            headerText = col + " ▲";
+          } else if (churnSortDir === "desc") {
+            headerText = col + " ▼";
+          }
+
+          th.onclick = () => {
+            // Toggle sort direction and re-render
+            churnSortDir = churnSortDir === "desc" ? "asc" : "desc";
+            sortByChurnProbability();
+          };
+        }
+
+        th.textContent = headerText;
+        headerRow.appendChild(th);
+      });
+      thead.appendChild(headerRow);
+      resultsTable.appendChild(thead);
+
+      // Body
+      const tbody = document.createElement("tbody");
+      rows.forEach(row => {
+        const tr = document.createElement("tr");
+        columns.forEach(col => {
+          const td = document.createElement("td");
+          const val = row[col];
+
+          if (col === "churn_prediction" && val !== undefined && val !== null && row._error == null) {
+            const tag = document.createElement("span");
+            const isChurn = String(val) === "1" || String(val).toLowerCase() === "true";
+            tag.className = "tag " + (isChurn ? "churn-yes" : "churn-no");
+            tag.textContent = isChurn ? "Churn" : "No churn";
+            td.appendChild(tag);
+          } else if (col === "churn_probability" && val !== undefined && val !== null) {
+            const num = Number(val);
+            td.textContent = isNaN(num) ? String(val) : num.toFixed(3);
+          } else if (col === "_error" && val) {
+            const tag = document.createElement("span");
+            tag.className = "tag error";
+            tag.textContent = "Error: " + String(val);
+            td.appendChild(tag);
+          } else if (val !== undefined && val !== null) {
+            td.textContent = String(val);
+          } else {
+            td.textContent = "";
+          }
+
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+      resultsTable.appendChild(tbody);
+    }
+
+    function sortByChurnProbability() {
+      if (!latestResults || latestResults.length === 0) return;
+
+      latestResults.sort((a, b) => {
+        const aVal = Number(a.churn_probability);
+        const bVal = Number(b.churn_probability);
+
+        const aNaN = isNaN(aVal);
+        const bNaN = isNaN(bVal);
+
+        // Keep rows with no probability at the bottom
+        if (aNaN && bNaN) return 0;
+        if (aNaN) return 1;
+        if (bNaN) return -1;
+
+        return churnSortDir === "asc" ? aVal - bVal : bVal - aVal;
+      });
+
+      // Re-render with sorted results
+      renderTable(latestResults);
+    }
+
+    // CSV download of latestResults
+    downloadBtn.addEventListener("click", function () {
+      if (!latestResults || latestResults.length === 0) {
+        setStatus("No results to download.", true);
+        return;
+      }
+
+      // Get consistent column order
+      const colSet = new Set();
+      latestResults.forEach(row => {
+        Object.keys(row).forEach(k => {
+          if (k !== "__parsed_extra") colSet.add(k);
+        });
+      });
+      const columns = Array.from(colSet);
+
+      let csv = "";
+      csv += columns.join(",") + "\n";
+
+      for (const row of latestResults) {
+        const line = columns.map(col => csvEscape(row[col]));
+        csv += line.join(",") + "\n";
+      }
+
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "churn_predictions.csv";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+
+    function csvEscape(value) {
+      if (value === null || value === undefined) return "";
+      const str = String(value);
+      // Quote if contains comma, quote, or newline
+      if (/[",\n]/.test(str)) {
+        return '"' + str.replace(/"/g, '""') + '"';
+      }
+      return str;
+    }
+  </script>
+</body>
+</html>
